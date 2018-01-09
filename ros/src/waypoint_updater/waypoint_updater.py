@@ -13,7 +13,7 @@ TARGET_SPEED = 4 # Meters per second
 01/09/2018 - A simple first implementation of the waypoint_updater
 	1. The car locates the nearest waypoint to itself
 		- If this is the first attempt, it searches all waypoints around the track
-		- If a previous closest waypoint is known, the search starts from there down the road 100 points
+		- If a previous closest waypoint is known, the search starts from there up and down the road n number of points
 	2. The car picks out the next 200 (or LOOKAHEAD_WPS) waypoints to follow
 	3. These next waypoints are published
 '''
@@ -52,20 +52,23 @@ class WaypointUpdater(object):
 			if (dist < min_dist):
 				min_dist = dist
 				min_idx = i
-	# If the previous nearest point is known, start the search from that point going forward	
+	# If the previous nearest point is known, start the search from that point going up and down the road	
 	else:
 		min_idx = self.current_position_idx		
 		min_dist = self.straight_distance(self.current_position.position.x, self.current_position.position.y, self.base_waypoints[min_idx].pose.pose.position.x, self.base_waypoints[min_idx].pose.pose.position.y)
 		
-		## Looking ahead to the next 100 points to find the minimum
-		# This is likely not so rubust!
-		search_window = 100;
-		if (min_idx + search_window <= len(self.base_waypoints)):
-			window = range(min_idx, min_idx + search_window)
-		else:
-			window = range(min_idx, len(self.base_waypoints)) + range(0, (min_idx + search_window - len(self.base_waypoints)))
+		## Looking around the last known closest point to find the minimum
+		search_window = 10;
+		last_idx = len(self.base_waypoints) - 1; # Index of last point in the waypoint data 
+		window = range(min_idx - search_window, min_idx + search_window) # The window of where to look		
+
 		# Looking in the "window" to find the nearest next point
 		for i in window:
+			# First, correcting if the index is out of bounds
+			if (i < 0):
+				i = i + last_idx
+			elif (i > last_idx):
+				i = i - last_idx
 			waypoint = self.base_waypoints[i]
 			dist = self.straight_distance(self.current_position.position.x, self.current_position.position.y, waypoint.pose.pose.position.x, waypoint.pose.pose.position.y)
 			if (dist < min_dist):
@@ -123,7 +126,7 @@ class WaypointUpdater(object):
         return dist
 
     def straight_distance(self,x1,y1,x2,y2):
-	return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+	return abs(math.sqrt((x2 - x1)**2 + (y2 - y1)**2))
 
 if __name__ == '__main__':
     try:
