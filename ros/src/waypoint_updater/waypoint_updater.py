@@ -63,7 +63,7 @@ class WaypointUpdater(object):
 		if (min_idx + search_window <= len(self.base_waypoints)):
 			window = range(min_idx, min_idx + search_window)
 		else:
-			window = range(min_idx, self.base_waypoints) + range(0, (min_idx + search_window - len(self.base_waypoints)))
+			window = range(min_idx, len(self.base_waypoints)) + range(0, (min_idx + search_window - len(self.base_waypoints)))
 		# Looking in the "window" to find the nearest next point
 		for i in window:
 			waypoint = self.base_waypoints[i]
