@@ -5,6 +5,7 @@ from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 
 import math
+import numpy as np
 
 LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
 TARGET_SPEED = 4 # Meters per second
@@ -42,7 +43,14 @@ class WaypointUpdater(object):
         # Grab current position from the current_pose message
         self.current_position = msg.pose
 
-        ### Finding the nearest waypoint ahead
+	# Index of last point in the waypoint data
+	last_idx = len(self.base_waypoints) - 1;  
+	
+	# If the previous closest point is known, this is the window we search up and down the road for
+	# the new closest point
+	search_window = 10;
+
+        ## Finding the nearest waypoint ahead
 	# If the previous nearest point is unknown, start the search from the beginning
 	if (self.current_position_idx == None):
 		min_dist = 1e6
@@ -57,38 +65,47 @@ class WaypointUpdater(object):
 		min_idx = self.current_position_idx		
 		min_dist = self.straight_distance(self.current_position.position.x, self.current_position.position.y, self.base_waypoints[min_idx].pose.pose.position.x, self.base_waypoints[min_idx].pose.pose.position.y)
 		
-		## Looking around the last known closest point to find the minimum
-		search_window = 10;
-		last_idx = len(self.base_waypoints) - 1; # Index of last point in the waypoint data 
+		## Creating the window around the last known closest point to find the minimum
 		window = range(min_idx - search_window, min_idx + search_window) # The window of where to look		
 
 		# Looking in the "window" to find the nearest next point
 		for i in window:
-			# First, correcting if the index is out of bounds
-			if (i < 0):
-				i = i + last_idx
-			elif (i > last_idx):
-				i = i - last_idx
-			waypoint = self.base_waypoints[i]
-			dist = self.straight_distance(self.current_position.position.x, self.current_position.position.y, waypoint.pose.pose.position.x, waypoint.pose.pose.position.y)
+			this_idx = i%last_idx			
+			waypoint = self.base_waypoints[this_idx]
+
+			# Distance to the car's location
+			dist = self.straight_distance(self.current_position.position.x, self.current_position.position.y, waypoint.pose.pose.position.x, waypoint.pose.pose.position.y)		
+		
 			if (dist < min_dist):
 				min_dist = dist
-				min_idx = i		
+				min_idx = this_idx
 
-	# Saving this position so we can start searching from this point for the next minimum distance
+	## Checking if the closest waypoint is farther down the road than the car
+	# Vector from the closest waypoint to the next waypoint along the road (a vector of the road direction)
+	road_dir = [self.base_waypoints[(min_idx+1)%last_idx].pose.pose.position.x - self.base_waypoints[min_idx].pose.pose.position.x, self.base_waypoints[(min_idx+1)%last_idx].pose.pose.position.y - self.base_waypoints[min_idx].pose.pose.position.y]
+	# Vector from the closest waypoint to the car's location
+	wp_to_car = [self.current_position.position.x - self.base_waypoints[min_idx].pose.pose.position.x, self.current_position.position.y - self.base_waypoints[min_idx].pose.pose.position.y]	
+	
+	# If the dot product is less than 0, then the closest waypoint is ahead of the car
+	check_dir = np.dot(road_dir, wp_to_car)	
+	if (check_dir >= 0):
+		min_idx = (min_idx + 1)%last_idx
+
+
+	## Saving this position so we can start searching from this point for the next minimum distance
 	self.current_position_idx = min_idx
 
-        # Chopping out the next LOOKAHEAD_WPS number of waypoints, accounting for wraparound
+        ## Chopping out the next LOOKAHEAD_WPS number of waypoints, accounting for wraparound
         if (min_idx + LOOKAHEAD_WPS < len(self.base_waypoints)):
         	next_points = self.base_waypoints[min_idx:min_idx+LOOKAHEAD_WPS]
         else:
         	next_points = self.base_waypoints[min_idx:] + self.base_waypoints[:(min_idx+LOOKAHEAD_WPS - len(self.base_waypoints))] 
         
-        # Set target speed per waypoint
+        ## Set target speed per waypoint
 	for waypoint in next_points:
 		waypoint.twist.twist.linear.x = TARGET_SPEED
         
-        # Generate the message with the list of waypoints to be followed
+        ## Generate the message with the list of waypoints to be followed
         next_points_msg = Lane()
         next_points_msg.header.frame_id = '/world'
         next_points_msg.header.stamp = rospy.Time(0)
