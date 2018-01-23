@@ -222,7 +222,6 @@ class TLDetector(object):
             # FIXME Temporary ground truth passthrough while get_classification method is in development.
             light_color = closest_light.state
             # light_color = get_light_state(closest_light)
-            print ("Light Waypoint: ", waypoint_idx, " Color: ", light_color)
             
         return waypoint_idx, light_color
 
