@@ -141,7 +141,7 @@ class WaypointUpdater(object):
         self.base_waypoints = waypoints.waypoints
         self.base_waypoints_size = len(self.base_waypoints)
         self.lookahead_wps = min(LOOKAHEAD_WPS, self.base_waypoints_size)
-        self.base_waypoints_sub.unregister()
+        self.sub_base_waypoints.unregister()
         
 
     def traffic_cb(self, msg):
