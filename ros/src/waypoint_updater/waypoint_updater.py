@@ -140,7 +140,6 @@ class WaypointUpdater(object):
         # Grab the list of all waypoints from the base_waypoints message
         self.base_waypoints = waypoints.waypoints
         self.base_waypoints_size = len(self.base_waypoints)
-        self.lookahead_wps = min(LOOKAHEAD_WPS, self.base_waypoints_size)
         self.base_waypoints_sub.unregister()
         
 
@@ -152,7 +151,7 @@ class WaypointUpdater(object):
         else:
             self.traffic_point_idx = None
             self.red_light_detected = False
-	pass
+            
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
@@ -163,9 +162,9 @@ class WaypointUpdater(object):
         if self.red_light_detected:
             # RED light
             distance_idx = self.traffic_point_idx - self.current_position_idx
-            if distance_idx > 1 & distance_idx < self.lookahead_wps:
+            if distance_idx > 1 & distance_idx < LOOKAHEAD_WPS:
                 # Distance from current position to traffic light position
-                distance_to_tl = self.distance(next_points, 0, distance_idx + 1)
+                distance_to_tl = self.distance(next_points, 0, distance_idx)
                 # Begin to deceleration
                 if distance_to_tl < DISTANCE_DECELERATION:
                     # Deceleration limited with max deceleration
@@ -173,7 +172,7 @@ class WaypointUpdater(object):
                     rospy.logwarn("Deceleration... {}".format(decel))
                     # Velocity for next points
                     for idx in range(len(next_points)):
-                        dist = self.distance(next_points, 0, idx + 1)
+                        dist = self.distance(next_points, 0, idx - 1)
                         velocity2 = self.current_velocity**2 - 2 * decel * dist
                         velocity = math.sqrt(max(velocity2, 0.0))
                         self.set_waypoint_velocity(next_points, idx, velocity)
