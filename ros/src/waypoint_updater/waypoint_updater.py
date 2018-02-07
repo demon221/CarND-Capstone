@@ -140,7 +140,7 @@ class WaypointUpdater(object):
         # Grab the list of all waypoints from the base_waypoints message
         self.base_waypoints = waypoints.waypoints
         self.base_waypoints_size = len(self.base_waypoints)
-        self.base_waypoints_sub.unregister()
+        self.sub_base_waypoints.unregister()
         
 
     def traffic_cb(self, msg):
