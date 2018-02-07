@@ -124,7 +124,7 @@ class TLDetector(object):
 
         return closest_wp_idx
 
-    def get_light_state(self, light):
+    def get_light_state(self, light, azimuth):
         """Determines the current color of the traffic light
 
         Args:
@@ -134,14 +134,84 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+        # For use_ground_truth, True means the light state is taken from 
+        # simulator ROS messages.
+        # 
+        # False calls light_classifier.get_classification() with a close 
+        # cropped color image of the light to be classified.
+        use_ground_truth = True
+        
         if(not self.has_image):
             self.prev_light_loc = None
             return False
+        ##### Grab a Region Of Interest in the input image that includes just 
+        # the traffic light using camera intrinsics and projective geometry. 
+        # These numbers were determined experimentally from observation of the 
+        # simulator and will need to be changed for different environments.
+        # Baseline assumption is that the simulator camera has no distortion.
+        
+        # 3D space object information
+        car_x = self.pose.pose.position.x
+        car_y = self.pose.pose.position.y
+        car_z = self.pose.pose.position.z
+        
+        light_x = light.pose.pose.position.x
+        light_y = light.pose.pose.position.y
+        light_z = light.pose.pose.position.z
 
+        light_v = 2.0
+        light_h = 0.89
+        
+        x_squared = (car_x - light_x)**2
+        y_squared = (car_y - light_y)**2
+        xy_distance = math.sqrt(x_squared + y_squared)
+        
+        # Project vertical locations into pixel space
+        img_ctr_y = 618.5
+        ifov_v = .0003626794     # radians/pixel
+        
+        light_top = img_ctr_y - math.atan(light_z/xy_distance)/ifov_v
+        light_bottom = img_ctr_y - math.atan((light_z-light_v)/xy_distance)/ifov_v
+        light_height = light_bottom - light_top
+        
+        # Add some space above and below for region of ineterest
+        # NOTE: (0,0) is the top-leftmost pixel in the image
+        y_margin = light_height/4
+        ROI_top = int(math.floor(light_top - y_margin))
+        ROI_bottom = int(1 + math.floor(light_bottom + y_margin))
+        
+        
+        # Project horizontal locations into pixel space
+        img_ctr_x = 365.2
+        ifov_h = 0.0003853372     # radians/pixel
+        light_ctr_x = img_ctr_x - (azimuth/ifov_h)
+        light_width = math.atan(light_h/xy_distance)/ifov_h
+        x_margin = 0.35*light_width
+        ROI_left = int(math.floor(light_ctr_x - 0.5*light_width - x_margin))
+        ROI_right = int(1 + math.floor(light_ctr_x + 0.5*light_width + x_margin))
+        
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        cropped_image = cv_image[ROI_top:ROI_bottom, ROI_left:ROI_right]
 
         #Get classification
-        return self.light_classifier.get_classification(cv_image)
+        light_state  = TrafficLight.UNKNOWN
+        if use_ground_truth is True:
+            light_state = light.state
+            source_text = "ground truth message"
+        else:
+            light_state = self.light_classifier.get_classification(cropped_image)
+            source_text = "classifier"
+            
+        state_text = "UNKNOWN"
+        if light_state == TrafficLight.RED:
+            state_text = "RED"
+        if light_state == TrafficLight.GREEN:
+            state_text = "GREEN"
+        if light_state == TrafficLight.YELLOW:
+            state_text = "YELLOW"
+        # print "Light state from", source_text, "is", state_text
+
+        return light_state
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -152,9 +222,9 @@ class TLDetector(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
-        # Hyper-Parameters
-        max_visible_distance = 60   # Anything further is too pay attention to
-        
+        # Anything further is too far away to consider
+        max_visible_distance = 120   
+
         # Initialize
         waypoint_idx = None
         light_color  = TrafficLight.UNKNOWN
@@ -211,6 +281,11 @@ class TLDetector(object):
                     closest_y = line_y
                     closest_idx = i
                     closest_dist = line_distance
+                    light_x = self.lights[i].pose.pose.position.x
+                    light_y = self.lights[i].pose.pose.position.y
+                    light_vec_x = light_x - ego_position.x
+                    light_vec_y = light_y - ego_position.y
+                    azimuth = math.atan2(light_vec_y, light_vec_x) - math.atan2(yaw_vec_y, yaw_vec_x)
                     
         # Process light (if we found one)
         if closest_idx >= 0:
@@ -219,9 +294,7 @@ class TLDetector(object):
             line_pose.position.y = closest_y
             waypoint_idx = self.get_closest_waypoint(line_pose)
             closest_light = self.lights[closest_idx]
-            # FIXME Temporary ground truth passthrough while get_classification method is in development.
-            light_color = closest_light.state
-            # light_color = get_light_state(closest_light)
+            light_color = self.get_light_state(closest_light, azimuth)
             
         return waypoint_idx, light_color
 
