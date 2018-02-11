@@ -57,8 +57,12 @@ class DBWNode(object):
         # self.controller = TwistController(<Arguments you wish to provide>)
 
         # TODO: Subscribe to all the topics you need to
+	rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb, queue_size=1)
 
         self.loop()
+
+    def twist_cb():
+	pass
 
     def loop(self):
         rate = rospy.Rate(50) # 50Hz
