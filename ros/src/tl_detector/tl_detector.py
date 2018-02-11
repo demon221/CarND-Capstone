@@ -197,10 +197,14 @@ class TLDetector(object):
         light_state  = TrafficLight.UNKNOWN
         if use_ground_truth is True:
             light_state = light.state
-            source_text = "ground truth message"
+            
+            print "Ground Truth light state: ", light_state
+            
+            dummy = self.light_classifier.get_classification(cropped_image)
+            
         else:
             light_state = self.light_classifier.get_classification(cropped_image)
-            source_text = "classifier"
+            
             
         state_text = "UNKNOWN"
         if light_state == TrafficLight.RED:
