@@ -60,16 +60,17 @@ class DBWNode(object):
 
         # TODO: Subscribe to all the topics you need to
 	rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb, queue_size=1)
-	rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_cb, queue_size = 1)
+	rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_cb, queue_size=1)
 
         self.loop()
 
-    def twist_cb(arg1, arg2):
+    def twist_cb(self, twist):
 	rospy.loginfo('Caught in twist callback')
 
     def dbw_cb(self, is_dbw_enabled):
+	rospy.loginfo('Caught in DBW callback')
 	self.is_dbw_enabled = is_dbw_enabled
-	rospy.loginfo('DBW is', is_dbw_enabled)
+	rospy.loginfo(is_dbw_enabled)
 	
 
     def loop(self):
