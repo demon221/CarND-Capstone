@@ -52,13 +52,25 @@ class DBWNode(object):
                                             ThrottleCmd, queue_size=1)
         self.brake_pub = rospy.Publisher('/vehicle/brake_cmd',
                                          BrakeCmd, queue_size=1)
+	#Custom variables added on DBWNode object
+	self.is_dbw_enabled = False
 
         # TODO: Create `TwistController` object
         # self.controller = TwistController(<Arguments you wish to provide>)
 
         # TODO: Subscribe to all the topics you need to
+	rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb, queue_size=1)
+	rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_cb, queue_size = 1)
 
         self.loop()
+
+    def twist_cb(arg1, arg2):
+	rospy.loginfo('Caught in twist callback')
+
+    def dbw_cb(self, is_dbw_enabled):
+	self.is_dbw_enabled = is_dbw_enabled
+	rospy.loginfo('DBW is', is_dbw_enabled)
+	
 
     def loop(self):
         rate = rospy.Rate(50) # 50Hz
