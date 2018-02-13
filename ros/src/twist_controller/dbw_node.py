@@ -69,7 +69,7 @@ class DBWNode(object):
 
     def dbw_cb(self, is_dbw_enabled):
 	self.is_dbw_enabled = is_dbw_enabled
-	rospy.loginfo('DBW is', is_dbw_enabled)
+        rospy.logwarn("DBW is {}".format(is_dbw_enabled))
 	
 
     def loop(self):
@@ -81,8 +81,8 @@ class DBWNode(object):
             #                                                     <proposed angular velocity>,
             #                                                     <current linear velocity>,
             #                                                     <dbw status>,
-            #                                                     <any other argument you need>)
             # if <dbw is enabled>:
+            #                                                     <any other argument you need>)
             #   self.publish(throttle, brake, steer)
             rate.sleep()
 
