@@ -47,6 +47,9 @@ class DBWNode(object):
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
 
 	self.sampling_time = 0.03
+	self.current_velocity = 0.0
+	self.intended_velocity = 0.0
+	self.intended_heading = 0.0
 
         self.steer_pub = rospy.Publisher('/vehicle/steering_cmd',
                                          SteeringCmd, queue_size=1)
@@ -58,7 +61,7 @@ class DBWNode(object):
 	self.is_dbw_enabled = False
 
         # TODO: Create `TwistController` object
-         self.controller = TwistController()
+        self.controller = Controller()
 
         # TODO: Subscribe to all the topics you need to
 	rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_cb)
@@ -71,12 +74,12 @@ class DBWNode(object):
 	self.is_dbw_enabled = dbw_data.data
 
     def twist_cb(self, twistStamped):
-	linear = twistStamped.twist.linear
-	angular = twistStamped.twist.angular
-	rospy.logwarn(linear.x)
+	self.intended_velocity = twistStamped.twist.linear.x
+	self.intended_heading = twistStamped.twist.angular.z
     
     def current_velocity_cb(self, twistStamped):
-	self.current_velocity = [twistStamped.twist.linear.x, twistStamped.twist.linear.y]
+	#self.current_velocity = [twistStamped.twist.linear.x, twistStamped.twist.linear.y]
+	self.current_velocity = twistStamped.twist.linear.x
 
 	
 
@@ -90,11 +93,14 @@ class DBWNode(object):
             #                                                     <current linear velocity>,
             #                                                     <dbw status>,
             #                                                     <any other argument you need>)
-
+	    diff_velocity =  self.intended_velocity - self.current_velocity
+	    diff_steering = 0.0    
+	
 	    throttle, brake, steer = self.controller.control(diff_velocity, diff_steering, self.sampling_time)	    
 
             if self.is_dbw_enabled:
                self.publish(throttle, brake, steer)
+		#self.publish(1.0, 0.0, 0.0)
             rate.sleep()
 
     def publish(self, throttle, brake, steer):

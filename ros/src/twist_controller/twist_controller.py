@@ -23,8 +23,9 @@ class Controller(object):
 
     def control(self, velocity_err, steering_err, sampling_time):
         throttle = self.th_controller.step(velocity_err, sampling_time)
-	steering_angle = self.steer_controller.step(velocity_err, sampling_time)
-	
+	#steering_angle = self.steer_controller.step(velocity_err, sampling_time)
+	steering_angle = 0.0	
+
 	if (throttle < 0.0):
 		brake = throttle
 		throttle = 0.0
