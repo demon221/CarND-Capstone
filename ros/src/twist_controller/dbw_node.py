@@ -45,7 +45,11 @@ class DBWNode(object):
         steer_ratio = rospy.get_param('~steer_ratio', 14.8)
         max_lat_accel = rospy.get_param('~max_lat_accel', 3.)
         max_steer_angle = rospy.get_param('~max_steer_angle', 8.)
-
+	
+	self.accel_limit = accel_limit
+	self.decel_limit = decel_limit
+	self.max_steer_angle = max_steer_angle
+	self.steer_ratio = steer_ratio
 	self.sampling_time = 0.03
 	self.current_velocity = 0.0
 	self.intended_velocity = 0.0
@@ -60,10 +64,10 @@ class DBWNode(object):
 	#Custom variables added on DBWNode object
 	self.is_dbw_enabled = False
 
-        # TODO: Create `TwistController` object
+        # Create Twist_Controller object
         self.controller = Controller()
 
-        # TODO: Subscribe to all the topics you need to
+        # Subscribe to all the topics you need to
 	rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_cb)
 	rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb)
 	rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
@@ -86,21 +90,22 @@ class DBWNode(object):
     def loop(self):
         rate = rospy.Rate(50) # 50Hz
         while not rospy.is_shutdown():
-            # TODO: Get predicted throttle, brake, and steering using `twist_controller`
-            # You should only publish the control commands if dbw is enabled
-            # throttle, brake, steering = self.controller.control(<proposed linear velocity>,
-            #                                                     <proposed angular velocity>,
-            #                                                     <current linear velocity>,
-            #                                                     <dbw status>,
-            #                                                     <any other argument you need>)
 	    diff_velocity =  self.intended_velocity - self.current_velocity
-	    diff_steering = 0.0    
+	    diff_steering = self.intended_heading    
 	
-	    throttle, brake, steer = self.controller.control(diff_velocity, diff_steering, self.sampling_time)	    
-
+	    throttle, brake, steer = self.controller.control(diff_velocity, diff_steering, self.sampling_time)
+	    
+	    #Cap the throttle, brake and steer to max limit
+	    if (throttle > self.accel_limit):
+	    	throttle = self.accel_limit
+	    if (steer > self.max_steer_angle):
+	    	steer = self.max_steer_angle
+	    elif (steer < (-1.0 * self.max_steer_angle)):
+	    	steer = -1.0 * self.max_steer_angle
+	    	
+	    steer = steer * self.steer_ratio
             if self.is_dbw_enabled:
                self.publish(throttle, brake, steer)
-		#self.publish(1.0, 0.0, 0.0)
             rate.sleep()
 
     def publish(self, throttle, brake, steer):
