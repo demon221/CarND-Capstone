@@ -3,7 +3,7 @@
 import rospy
 from std_msgs.msg import Bool
 from dbw_mkz_msgs.msg import ThrottleCmd, SteeringCmd, BrakeCmd, SteeringReport
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import TwistStamped, PoseStamped
 import math
 
 from twist_controller import Controller
@@ -54,6 +54,7 @@ class DBWNode(object):
 	self.current_velocity = 0.0
 	self.intended_velocity = 0.0
 	self.intended_heading = 0.0
+	self.current_heading = 0.0
 
         self.steer_pub = rospy.Publisher('/vehicle/steering_cmd',
                                          SteeringCmd, queue_size=1)
@@ -71,11 +72,16 @@ class DBWNode(object):
 	rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_cb)
 	rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cb)
 	rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
+	rospy.Subscriber('/current_pose', PoseStamped, self.current_pose_cb)
 
         self.loop()
 
     def dbw_cb(self, dbw_data):
 	self.is_dbw_enabled = dbw_data.data
+
+    def current_pose_cb(self, pose_data):
+	self.current_heading = pose_data.pose.orientation.z
+	rospy.logwarn("Current heading is: {}".format(self.current_heading))
 
     def twist_cb(self, twistStamped):
 	self.intended_velocity = twistStamped.twist.linear.x
@@ -91,9 +97,9 @@ class DBWNode(object):
         rate = rospy.Rate(50) # 50Hz
         while not rospy.is_shutdown():
 	    diff_velocity =  self.intended_velocity - self.current_velocity
-	    diff_steering = self.intended_heading    
+	    diff_heading = self.intended_heading - self.current_heading   
 	
-	    throttle, brake, steer = self.controller.control(diff_velocity, diff_steering, self.sampling_time)
+	    throttle, brake, steer = self.controller.control(diff_velocity, diff_heading, self.sampling_time)
 	    
 	    #Cap the throttle, brake and steer to max limit
 	    if (throttle > self.accel_limit):
@@ -104,6 +110,9 @@ class DBWNode(object):
 	    	steer = -1.0 * self.max_steer_angle
 	    	
 	    steer = steer * self.steer_ratio
+	    #rospy.logwarn("Difference heading is: {}".format(diff_heading))
+	    #rospy.logwarn("Steering angle is: {}".format(steer))
+	    #steer = -0.5
             if self.is_dbw_enabled:
                self.publish(throttle, brake, steer)
             rate.sleep()
