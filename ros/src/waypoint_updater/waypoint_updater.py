@@ -114,9 +114,9 @@ class WaypointUpdater(object):
 
         ## Chopping out the next LOOKAHEAD_WPS number of waypoints, accounting for wraparound
         if (min_idx + LOOKAHEAD_WPS < len(self.base_waypoints)):
-        	self.final_waypoints = self.base_waypoints[min_idx:min_idx+LOOKAHEAD_WPS]
+        	self.final_waypoints = self.base_waypoints[min_idx:(min_idx + LOOKAHEAD_WPS + 1)]
         else:
-        	self.final_waypoints = self.base_waypoints[min_idx:] + self.base_waypoints[:(min_idx+LOOKAHEAD_WPS - len(self.base_waypoints) - 1)] 
+        	self.final_waypoints = self.base_waypoints[min_idx:] + self.base_waypoints[:(min_idx+LOOKAHEAD_WPS - len(self.base_waypoints))] 
         
         ## Update velocity per waypoint
         self.velocity_update(self.final_waypoints)
@@ -203,7 +203,7 @@ class WaypointUpdater(object):
     def distance(self, waypoints, wp1, wp2):
         dist = 0
         dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
-        for i in range(wp1, wp2):
+        for i in range(wp1, wp2+1):
             dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
             wp1 = i
         return dist
