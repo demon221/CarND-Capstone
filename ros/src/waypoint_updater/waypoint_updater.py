@@ -116,7 +116,7 @@ class WaypointUpdater(object):
         if (min_idx + LOOKAHEAD_WPS < len(self.base_waypoints)):
         	self.final_waypoints = self.base_waypoints[min_idx:min_idx+LOOKAHEAD_WPS]
         else:
-        	self.final_waypoints = self.base_waypoints[min_idx:] + self.base_waypoints[:(min_idx+LOOKAHEAD_WPS - len(self.base_waypoints))] 
+        	self.final_waypoints = self.base_waypoints[min_idx:] + self.base_waypoints[:(min_idx+LOOKAHEAD_WPS - len(self.base_waypoints) - 1)] 
         
         ## Update velocity per waypoint
         self.velocity_update(self.final_waypoints)
@@ -172,7 +172,7 @@ class WaypointUpdater(object):
                     #rospy.logwarn("Deceleration... {}".format(decel))
                     # Velocity for next points
                     for idx in range(len(next_points)):
-                        dist = self.distance(next_points, 0, idx - 1)
+                        dist = self.distance(next_points, 0, idx)
                         velocity2 = self.current_velocity**2 - 2 * decel * dist
                         velocity = math.sqrt(max(velocity2, 0.0))
                         self.set_waypoint_velocity(next_points, idx, velocity)
@@ -203,7 +203,7 @@ class WaypointUpdater(object):
     def distance(self, waypoints, wp1, wp2):
         dist = 0
         dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
-        for i in range(wp1, wp2+1):
+        for i in range(wp1, wp2):
             dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
             wp1 = i
         return dist
