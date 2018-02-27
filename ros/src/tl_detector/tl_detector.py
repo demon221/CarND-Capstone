@@ -139,15 +139,16 @@ class TLDetector(object):
         # 
         # False calls light_classifier.get_classification() with a close 
         # cropped color image of the light to be classified.
-        use_ground_truth = True
+        use_ground_truth = False
         
         if(not self.has_image):
             self.prev_light_loc = None
             return False
+        
         ##### Grab a Region Of Interest in the input image that includes just 
         # the traffic light using camera intrinsics and projective geometry. 
-        # These numbers were determined experimentally from observation of the 
-        # simulator and will need to be changed for different environments.
+        # These numbers were determined experimentally from observation of 
+        # the simulator and will need to be changed for different environments.
         # Baseline assumption is that the simulator camera has no distortion.
         
         # 3D space object information
@@ -178,6 +179,7 @@ class TLDetector(object):
         # NOTE: (0,0) is the top-leftmost pixel in the image
         y_margin = light_height/4
         ROI_top = int(math.floor(light_top - y_margin))
+        ROI_top = max(ROI_top, 0)
         ROI_bottom = int(1 + math.floor(light_bottom + y_margin))
         
         
@@ -189,29 +191,19 @@ class TLDetector(object):
         x_margin = 0.35*light_width
         ROI_left = int(math.floor(light_ctr_x - 0.5*light_width - x_margin))
         ROI_right = int(1 + math.floor(light_ctr_x + 0.5*light_width + x_margin))
-        
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
         cropped_image = cv_image[ROI_top:ROI_bottom, ROI_left:ROI_right]
 
         #Get classification
-        light_state  = TrafficLight.UNKNOWN
+        detected_state = TrafficLight.UNKNOWN
         if use_ground_truth is True:
-            light_state = light.state
-            source_text = "ground truth message"
-        else:
-            light_state = self.light_classifier.get_classification(cropped_image)
-            source_text = "classifier"
+            detected_state = light.state
             
-        state_text = "UNKNOWN"
-        if light_state == TrafficLight.RED:
-            state_text = "RED"
-        if light_state == TrafficLight.GREEN:
-            state_text = "GREEN"
-        if light_state == TrafficLight.YELLOW:
-            state_text = "YELLOW"
-        # print "Light state from", source_text, "is", state_text
-
-        return light_state
+        else:
+            detected_state = self.light_classifier.get_classification(cropped_image)
+            #if detected_state != light.state:
+            #    print "Classification error! Detected state is ", detected_state, " Actual state is ", light.state
+        return detected_state
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its

@@ -114,7 +114,7 @@ class WaypointUpdater(object):
 
         ## Chopping out the next LOOKAHEAD_WPS number of waypoints, accounting for wraparound
         if (min_idx + LOOKAHEAD_WPS < len(self.base_waypoints)):
-        	self.final_waypoints = self.base_waypoints[min_idx:min_idx+LOOKAHEAD_WPS]
+        	self.final_waypoints = self.base_waypoints[min_idx:(min_idx + LOOKAHEAD_WPS + 1)]
         else:
         	self.final_waypoints = self.base_waypoints[min_idx:] + self.base_waypoints[:(min_idx+LOOKAHEAD_WPS - len(self.base_waypoints))] 
         
@@ -134,7 +134,7 @@ class WaypointUpdater(object):
         x = msg.twist.linear.x
         y = msg.twist.linear.y
         self.current_velocity = math.sqrt(x*x + y*y)
-        rospy.logwarn("Vecolity is {}".format(self.current_velocity))
+        #rospy.logwarn("Vecolity is {}".format(self.current_velocity))
     
     def waypoints_cb(self, waypoints):
         # Grab the list of all waypoints from the base_waypoints message
@@ -169,27 +169,27 @@ class WaypointUpdater(object):
                 if distance_to_tl < DISTANCE_DECELERATION:
                     # Deceleration limited with max deceleration
                     decel = min(self.current_velocity**2 / (2 * distance_to_tl), -self.decel_limit)
-                    rospy.logwarn("Deceleration... {}".format(decel))
+                    #rospy.logwarn("Deceleration... {}".format(decel))
                     # Velocity for next points
                     for idx in range(len(next_points)):
-                        dist = self.distance(next_points, 0, idx - 1)
+                        dist = self.distance(next_points, 0, idx)
                         velocity2 = self.current_velocity**2 - 2 * decel * dist
                         velocity = math.sqrt(max(velocity2, 0.0))
                         self.set_waypoint_velocity(next_points, idx, velocity)
                 # STOP before red light
                 elif distance_to_tl < DISTANCE_STOP:
-                    rospy.logwarn("STOP....")
+                    #rospy.logwarn("STOP....")
                     velocity = 0.0
                     for idx in range(len(next_points)):
                         self.set_waypoint_velocity(next_points, idx, velocity)
                 # Keep current velocity
                 else:
-                    rospy.logwarn("Keep Speed...")
+                    #rospy.logwarn("Keep Speed...")
                     velocity = self.current_velocity
                     for idx in range(len(next_points)):
                         self.set_waypoint_velocity(next_points, idx, velocity)
         else:
-            rospy.logwarn("Accerlation...")
+            #rospy.logwarn("Accerlation...")
             velocity = self.cruise_speed
             for idx in range(len(next_points)):
                 self.set_waypoint_velocity(next_points, idx, velocity)
