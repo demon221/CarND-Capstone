@@ -1,11 +1,12 @@
 This is the project repo for Team Trumpchi's capstone project for the Udacity Self-Driving Car Nanodegree.
 
-Project members are:
-Yifeng Huang     yifenghuang.dh@gmail.com
-Travis Krebs     tkrebs@ryerson.ca
-Marc Norvig      marc.norvig@gmail.com
-Saurabh Sohoni   sohonisaurabh@ymail.com
-Gao Zhi          demongz221@hotmail.com
+Team members are:
+
+    Yifeng Huang     yifenghuang.dh@gmail.com
+    Travis Krebs     tkrebs@ryerson.ca
+    Marc Norvig      marc.norvig@gmail.com
+    Saurabh Sohoni   sohonisaurabh@ymail.com
+    Gao Zhi          demongz221@hotmail.com
 
 Below is the original readme file:
 ----------------------------------
